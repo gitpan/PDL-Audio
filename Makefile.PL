@@ -1,10 +1,14 @@
-require 5.005; # lower versions of perl not supported
+require 5.006; # lower versions of perl not supported
 
+use Config;
 use ExtUtils::MakeMaker;
-
 use PDL::Core::Dev;
 
-system "cd sndlib && ./configure";
+{
+   local $ENV{CC} = "$Config{cc} $Config{cppflags} $Config{ccflags} $Config{cccdlflags}";
+   print "$ENV{CC}\n";
+   system "cd sndlib && ./configure";
+}
 
 @pack = ["audio.pd",Audio,PDL::Audio];
 %hash = pdlpp_stdargs(@pack);

@@ -1,5 +1,16 @@
 Revision history for Perl extension PDL::Audio
 
+TODO: read_sound returns undef? how to return ints from pp_def subs?
+
+1.01  Tue Dec 28 21:50:20 CET 2004
+	- compile sndlib with -fPIC or equivalent.
+        - fixed some typoes, and many minor bugs
+          (thx to oesi).
+        - open soundcards in nonblocking mode when initializing,
+          avoiding blocks on lesser hardware.
+        - avoid in-place fftw as they are documented gto work but simply
+          barf.
+
 1.0   Mon Jul 12 15:28:17 CEST 2004
 	- fixed _writesound (I never needed that).
         - slightly improved filter_center.

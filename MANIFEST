@@ -22,6 +22,7 @@ sndlib/io.c
 sndlib/sndinfo.c
 sndlib/sndlib.h
 sndlib/sound.c
+sndlib/sndlib.txt
 t/load.t
 xlib.xs
 xlib.h

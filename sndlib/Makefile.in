@@ -31,7 +31,7 @@ sndlib.a: $(SNDLIB_HEADERS) $(SNDLIB_O_FILES)
 $(SNDLIB_O_FILES): $(SNDLIB_HEADERS)
 
 clean:
-	rm -f $(SNDLIB_O_FILES)
+	rm -f $(SNDLIB_O_FILES) sndlib.a
 
 sndplay: $(SNDLIB_HEADERS) $(SNDLIB_O_FILES) sndplay.o
 	$(CC) sndplay.c -o sndplay $(libdir)/$(LIB_NAME)

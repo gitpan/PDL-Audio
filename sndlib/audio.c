@@ -1394,9 +1394,9 @@ int initialize_audio(void)
       num_mixers = MAX_MIXERS;
       num_dsps = MAX_DSPS;
 #ifdef NEW_OSS
-      fd = open(DAC_NAME,O_WRONLY,0);
-      if (fd == -1) fd = open(SYNTH_NAME,O_RDONLY,0);
-      if (fd == -1) fd = open(MIXER_NAME,O_RDONLY,0);
+      fd = open(DAC_NAME,O_WRONLY|O_NONBLOCK,0);
+      if (fd == -1) fd = open(SYNTH_NAME,O_RDONLY|O_NONBLOCK,0);
+      if (fd == -1) fd = open(MIXER_NAME,O_RDONLY|O_NONBLOCK,0);
       if (fd != -1)
 	{
 	  status = ioctl(fd,OSS_GETVERSION,&ignored);
@@ -1443,7 +1443,7 @@ int initialize_audio(void)
 	   *     if no change, move to next dsp and try again, if no more dsps, quit (checking for null case as before)
 	   */
 	  sprintf(dname,"%s%d",MIXER_NAME,nmix);
-	  md = open(dname,O_RDWR,0);
+	  md = open(dname,O_RDWR|O_NONBLOCK,0);
 	  if (md == -1)
 	    {
 	      if (errno == EBUSY) 
@@ -1455,9 +1455,9 @@ int initialize_audio(void)
 	      else break;
 	    }
 	  sprintf(dname,"%s%d",DAC_NAME,ndsp);
-	  fd = open(dname,O_RDWR,0);
-	  if (fd == -1) fd = open(dname,O_RDONLY,0);
-	  if (fd == -1) fd = open(dname,O_WRONLY,0); /* some output devices need this */
+	  fd = open(dname,O_RDWR|O_NONBLOCK,0);
+	  if (fd == -1) fd = open(dname,O_RDONLY|O_NONBLOCK,0);
+	  if (fd == -1) fd = open(dname,O_WRONLY|O_NONBLOCK,0); /* some output devices need this */
 	  if (fd == -1)
 	    {
 	      close(md); 
@@ -1551,7 +1551,7 @@ int initialize_audio(void)
 	}
       if (sound_cards == 0)
 	{
-	  fd = open(DAC_NAME,O_WRONLY,0);
+	  fd = open(DAC_NAME,O_WRONLY|O_NONBLOCK,0);
 	  if (fd != -1)
 	    {
 	      sound_cards = 1;

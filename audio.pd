@@ -1,4 +1,4 @@
-$VERSION = '1.0';
+$VERSION = '1.01';
 
 pp_setversion $VERSION;
 pp_beginwrap (); # force error with older PPs
@@ -15,8 +15,7 @@ PDL::Audio - Some PDL functions intended for audio processing.
 
 =head1 DESCRIPTION
 
-Oh well ;) Not much "description" has been written yet! See my other
-modules for even worse documentation ;)
+Oh well ;) Not much "introductory documentation" has been written yet :(
 
 =head2 NOTATION
 
@@ -24,10 +23,12 @@ Brackets around parameters indicate that the respective parameter is
 optional and will be replaced with some default value when absent (or
 C<undef>, which might be different in other packages).
 
-The sampling frequency and duration are by default (see individual descriptions)
-given in cycles/sample (or samples in case of a duration). That means if you want to specify a duration
-of two seconds, you have to multiply by the sampling frequency in HZ, and if you want to specify a frequency of 440 Hz, you have to divide
-by the sampling frequency:
+The sampling frequency and duration are by default (see individual
+descriptions) given in cycles/sample (or samples in case of a
+duration). That means if you want to specify a duration of two seconds,
+you have to multiply by the sampling frequency in HZ, and if you want
+to specify a frequency of 440 Hz, you have to divide by the sampling
+frequency:
 
  # Syntax: gen_oscil duration*, frequency/
  $signal = gen_oscil 2*HZ, 440/HZ;
@@ -332,9 +333,9 @@ sub raudio {
    my $fd = open_sound_input $path; $fd >= 0 or barf "$path: ".audio_error_name audio_error;
 
    my $pdl = zeroes long, $frames, $channels;
-   $pdl->clump(-1)->read_sound($fd, $channels, $frames)
+   $pdl->clump(-1)->read_sound ($fd, $channels, $frames)
                                         >= 0 or barf "$path: ".audio_error_name audio_error;
-   (close_sound_input $path)            >= 0 or barf "$path: ".audio_error_name audio_error;
+   (close_sound_input $fd)              >= 0 or barf "$path: ".audio_error_name audio_error;
    $pdl = $pdl->short->xchg(0,1);
    $pdl = $pdl->clump(2) if $channels == 1;
    $pdl->sever;
@@ -418,7 +419,7 @@ EOD
 
 for my $d (qw(read write)) {
    pp_def($d.'_sound',
-          Pars => ($d eq "read" ? '[o]' : '').'sample(n)',
+          Pars => ($d eq "read" ? '[o]' : '') . 'sample(n)',
           OtherPars => "int fd; int chans; int frames",
           GenericTypes => [L],
           PMCode => '', 
@@ -459,8 +460,8 @@ pp_addpm <<'EOP';
 
 =head2 playaudio pdl, [option-hash], option => value ...
 
-Play the piddle as an audio file. Options can be supplied either through the option hash (a hash-reference),
-through the pdl header or the options:
+Play the piddle as an audio file. Options can be supplied either through
+the option hash (a hash-reference), through the pdl header or the options:
 
  # play a piddle that has a valid header (e.g. from raudio)
  $pdl->playaudio;
@@ -753,7 +754,7 @@ C<waveform>.
 
 =head2 partials2waveshape size*, partials, amplitudes, [phase], [fm_mod/]
 
-Take a list (perl list or pdl) of (integer) C<partials> and a list of
+Take a (perl or pdl) list of (integer) C<partials> and a list of
 C<amplitudes> and generate a single wave shape that results by adding
 these partial sines.
 
@@ -761,7 +762,7 @@ This could (and should) be used by the C<gen_from_table> generator.
 
 =head2 gen_from_partials duration*, frequency/, partials, amplitudes, [phase], [fm_mod/]
 
-Take a list (perl list or pdl) of (possibly noninteger) C<partials> and a
+Take a (perl list or pdl) list of (possibly noninteger) C<partials> and a
 list of C<amplitudes> and generate the waveform resulting by summing up
 all these partial sines.
 
@@ -1209,11 +1210,10 @@ impulse response given a set of band edges, the desired reponse on those
 bands, and the weight given to the error in those bands, using the
 Parks-McClellan exchange algorithm.
 
-The first argument (the one with the funny name) sets the filter
-size: C<design_remez_fir> returns as many coefficients as specified via
-this parameter.
+The first argument sets the filter size: C<design_remez_fir> returns as
+many coefficients as specified by this parameter.
 
-C<bands> is a vector of band edge pairs (start - end), who specify the
+C<bands> is a vector of band edge pairs (start - end), which specify the
 start and end of the bands in the filter specification.  These must be
 non-overlapping and sorted in increasing order. Only values between C<0>
 (0 Hz) and C<0.5> (the Nyquist frequency) are allowed.
@@ -1486,7 +1486,7 @@ These are (case-insensitive) strings, so you might need to quote them.
 		consists of ones).
  COSCOS		the cosine-squared window (a partition of unity)
  SINC 		same as RIEMANN
- HANN		same as HANNING (his name was Hann, not Hannning)
+ HANN		same as HANNING (his name was Hann, not Hanning)
 
  LIST		this "type" is special in that it returns a list of all types
 
@@ -1500,10 +1500,10 @@ sub gen_fft_window {
    $size = $size->getdim(0) if ref $size;
    $size > 2 or barf "fft window size too small";
 
-   my $midn = $size >> 1;
+   my $midn  = $size >> 1;
    my $midm1 = ($size-1) >> 1;
    my $midp1 = ($size+1) >> 1;
-   my $dur = zeroes $size;
+   my $dur   = zeroes $size;
    my $sf    = ($size-1)/$size;
    %fft_window = (
       RECTANGULAR => sub {
@@ -1615,7 +1615,8 @@ sub _fftw {
    defined $fftw_loaded or eval {
       $fftw_loaded = 0;
       require PDL::FFTW;
-      PDL::FFTW::load_wisdom("$ENV{HOME}/.pdl_wisdom") if $ENV{HOME};
+      PDL::FFTW::load_wisdom("$ENV{HOME}/.pdl_wisdom")
+         if -r "$ENV{HOME}/.pdl_wisdom";
       $fftw_loaded = 1;
    };
    $fftw_loaded;
@@ -1625,7 +1626,7 @@ sub rfft {
    my $data = $_[0];
    if (_fftw) {
       my $x = $data->r2C;
-      PDL::FFTW::nfftw($x);
+      $x = PDL::FFTW::fftw $x;
       $x;
    } else {
       require PDL::FFT;
@@ -1638,7 +1639,7 @@ sub rfft {
 sub irfft {
    if (_fftw) {
       $x = $_[0]->copy;
-      PDL::FFTW::infftw($x);
+      $x = PDL::FFTW::ifftw $x;
       re $x / $x->getdim(1);
    } else {
       require PDL::FFT;
@@ -1652,8 +1653,8 @@ sub irfft {
 
 Returns the spectrum of a given pdl. If C<norm> is absent (or C<undef>),
 it returns the magnitude of the fft of C<data>. When C<norm> == 1 (or
-C<eq 'NORM'>, in any case), it returns the magnitude, normalized to be
-between zero and one. If C<norm> == 0 (or C<eq 'dB'>, in any case), then
+C<eq 'NORM'>, case-insensitive), it returns the magnitude, normalized to be
+between zero and one. If C<norm> == 0 (or C<eq 'dB'>, case-insensitive), then
 it returns the magnitude in dB.
 
 C<data> is multiplied with C<window> (if not C<undef>) before calculating
@@ -1670,13 +1671,19 @@ sub spectrum {
    my ($data, $norm, $window,  $beta) = @_;
    my $len;
    if (defined $window) {
-      $window = gen_fft_window ($data->getdim(0), $window, $beta) unless ref $window;
+      $window = gen_fft_window ($data->getdim (0), $window, $beta) unless ref $window;
       $data = $data * $window;
-      $len = $window->getdim(0);
+      $len = $window->getdim (0);
    } else {
-      $len = $data->getdim(0);
+      $len = $data->getdim (0);
    }
-   $data = rfft ($data->slice("0:".($len-1))->sever)->slice(",0:".int($len/2))->Cr2p->slice("(0)");
+   $data = rfft (
+              $data->slice ("0:" . ($len - 1))
+                   ->sever
+           )
+           ->slice (",0:" . int ($len / 2))
+           ->PDL::Complex::Cr2p
+           ->slice ("(0)");
    if ($norm == 1 || lc $norm eq "norm") {
       $data / max $data;
    } elsif (($norm =~ /^[.0]+$/) || (lc $norm eq "db")) {
