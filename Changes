@@ -1,0 +1,20 @@
+Revision history for Perl extension PDL::Audio
+
+0.04  Tue Dec 28 16:29:47 CET 1999
+        - many more filters (fft, src, granulate, convolve), many more
+        bugfixes, working accessors...
+        - remez fir filter design
+        - cut down on object size using GenericTypes. Hooo is it large!
+
+0.03  (private release)
+        - implemented many generators and filters, inspired by common lisp
+        music.
+
+0.02  Tue Dec 21 15:07:56 CET 1999
+	- added irix audio support and some more by Christian Soeller.
+        - removed that irix support again, in favour of sndlib ;)
+        - clm.c[ch] is distributed but not yet used (it is _large_!).
+
+0.01  Mon Dec 13 06:02:42 CET 1999
+	- original version; created by cp -rp
+

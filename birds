@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+
+use PDL;
+use PDL::Audio;
+use PDL::Graphics::PGPLOT;
+
+$|=1;
+
+$birds = do 'bird-def.pl';
+
+sub hz(){ 44100 }
+
+sub bird {
+   my ($dur, $freq, $skew, $amp, $freqenv, $ampenv, $partials) = @_;
+   $freqenv = gen_env $dur, @$freqenv;
+   $ampenv = gen_env $dur, @$ampenv;
+   my $os = gen_oscil $dur, $freq, 0, $freqenv*$skew;#*PDL::Audio::PI2;
+   $os = pdl($partials)->partials2polynomial(1)->polynomial($os) if defined $partials;
+   $os*$ampenv;
+}
+
+sub shuffle($) { # (x y x y ... => ((x y) (x y) ...
+   my $xy = pdl $_[0]; [$xy->slice("1:-1:2"), $xy->slice("0:-1:2")];
+}
+
+sub gen_bird {
+   my @mix;
+   for (@{+shift}) {
+      my ($beg, $dur, $freq, $skew, $amp, $freqenv, $ampenv, $partials) = @$_;
+      $partials = pdl($partials)->slice("1:-1:2") if $partials;
+      push @mix, ($beg*hz, bird(hz*$dur, $freq/hz, $skew/hz, $amp, shuffle $freqenv, shuffle $ampenv, $partials));
+      line $mix[-1];
+   }
+   audiomix @mix;
+}
+
+for (keys %$birds) {
+   print $_;
+   $chirp = (gen_bird $birds->{$_})->cut_leading_silence(0);
+   line $chirp;
+   print "\n";
+   scale2short($chirp)->playaudio(rate => hz);
+}
+
+
