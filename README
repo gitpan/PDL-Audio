@@ -1,5 +1,609 @@
-Ok, PDL::Audio is beta, but the reason why it breaks is that it requires
-not only the current cvs version of PDL, but also a special branch in it
-(it might even go away in the future, to be integrated into PDL).  I just
-uploaded it to make it _possible_ to use it for the interested people.
+NAME
+    PDL::Audio - Some PDL functions intended for audio processing.
+
+SYNOPSIS
+      use PDL;
+      use PDL::Audio;
+
+DESCRIPTION
+    Oh well ;) Not much "introductory documentation" has been written yet :(
+
+  NOTATION
+    Brackets around parameters indicate that the respective parameter is
+    optional and will be replaced with some default value when absent (or
+    "undef", which might be different in other packages).
+
+    The sampling frequency and duration are by default (see individual
+    descriptions) given in cycles/sample (or samples in case of a duration).
+    That means if you want to specify a duration of two seconds, you have to
+    multiply by the sampling frequency in HZ, and if you want to specify a
+    frequency of 440 Hz, you have to divide by the sampling frequency:
+
+     # Syntax: gen_oscil duration*, frequency/
+     $signal = gen_oscil 2*HZ, 440/HZ;
+     # with a sampling frequency of 44100 Hertz:
+     $signal = gen_oscil 2*44100, 440/44100;
+
+    To help you, the required unit is given as a type suffix in the
+    parameter name. A "/" means that you have to divide by the sampling
+    frequency (to convert from Hertz) and a suffix of "*" indicates that a
+    multiplication is required.
+
+    Most parameters named "size", "duration" (or marked with "*") can be
+    replaced by a piddle, which is then used to give length and from
+    (mono/stereo).
+
+  HEADER ATTRIBUTES
+    The following header attributes are stored and evaluated by most
+    functions. PDL::Audio provides mutator methods for all them (e.g.
+
+     print "samplerate is ", $pdl->rate;
+     $pdl->comment("set the comment to this string");
+
+    rate
+        The sampling rate in hz.
+
+    filetype
+        The filetype (wav, au etc..). Must be one of:
+
+          FILE_NEXT FILE_AIFC FILE_RIFF FILE_BICSF FILE_NIST FILE_INRS FILE_ESPS
+          FILE_SVX FILE_VOC FILE_SNDT FILE_RAW FILE_SMP FILE_SD2 FILE_AVR
+          FILE_IRCAM FILE_SD1 FILE_SPPACK FILE_MUS10 FILE_HCOM FILE_PSION
+          FILE_MAUD FILE_IEEE FILE_DESKMATE FILE_DESKMATE_2500 FILE_MATLAB
+          FILE_ADC FILE_SOUNDEDIT FILE_SOUNDEDIT_16 FILE_DVSM FILE_MIDI
+          FILE_ESIGNAL FILE_SOUNDFONT FILE_GRAVIS FILE_COMDISCO FILE_GOLDWAVE
+          FILE_SRFS FILE_MIDI_SAMPLE_DUMP FILE_DIAMONDWARE FILE_REALAUDIO
+          FILE_ADF FILE_SBSTUDIOII FILE_DELUSION FILE_FARANDOLE FILE_SAMPLE_DUMP
+          FILE_ULTRATRACKER FILE_YAMAHA_SY85 FILE_YAMAHA_TX16 FILE_DIGIPLAYER
+          FILE_COVOX FILE_SPL FILE_AVI FILE_OMF FILE_QUICKTIME FILE_ASF
+          FILE_YAMAHA_SY99 FILE_KURZWEIL_2000 FILE_AIFF FILE_AU
+
+    path
+        The filename (or file specification) used to load or save a file.
+
+    format
+        Specifies the type the underlying file format uses. The samples will
+        always be in short or long signed format.
+
+        Must be one of
+
+           FORMAT_NO_SND FORMAT_16_LINEAR FORMAT_8_MULAW FORMAT_8_LINEAR
+           FORMAT_32_FLOAT FORMAT_32_LINEAR FORMAT_8_ALAW FORMAT_8_UNSIGNED
+           FORMAT_24_LINEAR FORMAT_64_DOUBLE FORMAT_16_LINEAR_LITTLE_ENDIAN
+           FORMAT_32_LINEAR_LITTLE_ENDIAN FORMAT_32_FLOAT_LITTLE_ENDIAN
+           FORMAT_64_DOUBLE_LITTLE_ENDIAN FORMAT_16_UNSIGNED
+           FORMAT_16_UNSIGNED_LITTLE_ENDIAN FORMAT_24_LINEAR_LITTLE_ENDIAN
+           FORMAT_32_VAX_FLOAT FORMAT_12_LINEAR FORMAT_12_LINEAR_LITTLE_ENDIAN
+           FORMAT_12_UNSIGNED FORMAT_12_UNSIGNED_LITTLE_ENDIAN COMPATIBLE_FORMAT
+
+        PDL::Audio conviniently defines the following aliases for the
+        following constants, that are already correct for the host
+        byteorder:
+
+           FORMAT_ULAW_BYTE FORMAT_ALAW_BYTE FORMAT_LINEAR_BYTE
+           FORMAT_LINEAR_SHORT FORMAT_LINEAR_USHORT FORMAT_LINEAR_LONG
+           FORMAT_LINEAR_FLOAT FORMAT_LINEAR_DOUBLE
+
+    comment
+        The file comment (if any).
+
+    device
+        The device to output audio. One of:
+
+           DEV_DEFAULT DEV_READ_WRITE DEV_ADAT_IN DEV_AES_IN DEV_LINE_OUT
+           DEV_LINE_IN DEV_MICROPHONE DEV_SPEAKERS DEV_DIGITAL_IN DEV_DIGITAL_OUT
+           DEV_DAC_OUT DEV_ADAT_OUT DEV_AES_OUT DEV_DAC_FILTER DEV_MIXER
+           DEV_LINE1 DEV_LINE2 DEV_LINE3 DEV_AUX_INPUT DEV_CD_IN DEV_AUX_OUTPUT
+           DEV_SPDIF_IN DEV_SPDIF_OUT
+   
+  EXPORTED CONSTANTS
+    In addition to the exported constants described above (and later in the
+    function descriptions), this module also exports the mathematical
+    constants M_PI and M_2PI, so watch out for clashes!
+
+FUNCTIONS
+  sound_format_name format_code
+    Return the human-readable name of the file format with code
+    "format_code".
+
+  sound_type_name type_code
+    Return the human-readable name of the sample type with code "type_code".
+
+  describe_audio piddle
+    Describe the audio stream contained in piddle and return it as a string.
+    A fresh piddle might return:
+
+     mono sound with 27411 samples
+
+    Whereas a freshly loaded soundfile might yield:
+
+     stereo sound with 27411 samples, original name "kongas.wav", type 2 (RIFF),
+     rate 11025/s (duration 2.49s), format 7 (8-bit unsigned)
+
+  raudio path, [option-hash], option => value, ...
+    Reads audio data into the piddle. Options can be anything, most useful
+    values are "filetype", "rate", "channels" and "format".
+
+     # read any file
+     $pdl = raudio "file.wav";
+     # read a file. if it is a raw file preset values
+     $pdl = raudio "file.raw", filetype => FILE_RAW, rate => 44100, channels => 2;
+
+  waudio pdl, [option-hash], option => value, ...
+    Writes a pdl as a file. The path is taken from the header (or the
+    options), e.g.:
+
+     # write a file, using the header of another piddle
+     $pdl->waudio($orig_file->gethdr);
+     # write pdl as au file, take rate from the header
+     $pdl->waudio(path => "piddle.au", filetype => FILE_AU, format => FORMAT_16_LINEAR;
+
+  cut_leading_silence pdl, level
+    Cuts the leading silence (i.e. all samples with absolute value < level)
+    and returns the resulting part.
+
+  cut_trailing_silence pdl, level
+    Cuts the trailing silence.
+
+  cut_silence pdl, level
+    Calls "cut_leading_silence" and "cut_trailing_silence" and returns the
+    result.
+
+  playaudio pdl, [option-hash], option => value ...
+    Play the piddle as an audio file. Options can be supplied either through
+    the option hash (a hash-reference), through the pdl header or the
+    options:
+
+     # play a piddle that has a valid header (e.g. from raudio)
+     $pdl->playaudio;
+     # play it with a different samplerate
+     $pdl->playaudio(rate => 22050);
+
+  ulaw2linear
+      Signature: (byte u(n); short [o] s(n))
+
+    conversion from (m)u-law into signed, linear, 16 bit samples (rather
+    slow)
+
+  linear2ulaw
+      Signature: (short s(n); byte [o] u(n))
+
+    conversion from signed, linear, 16 bit samples into (m)u-law (rather
+    slow)
+
+  alaw2linear
+      Signature: (byte u(n); short [o] s(n))
+
+    conversion from A-law into signed, linear, 16 bit samples (rather slow)
+
+  linear2alaw
+      Signature: (short s(n); byte [o] u(n))
+
+    conversion from signed, linear, 16 bit samples into A-law (rather slow)
+
+  gen_oscil duration*, freq/, phase-mod, [fm-mod/]
+  gen_sawtooth duration*, freq/, phase-mod, [fm-mod/]
+  gen_square duration*, freq/, phase-mod, duty, [fm-mod/]
+  gen_triangle duration*, freq/, phase-mod, [fm-mod/]
+  gen_pulse_train duration*, freq/, phase-mod, [fm-mod/]
+  gen_rand duration*, freq/
+  gen_rand_1f duration*
+    All of these functions generate appropriate waveforms with frequency
+    "freq" (cycles/sample) and phase "phase" (0..1).
+
+    The "duration" might be either a piddle (which gives the form of the
+    output) or the number of samples to generate.
+
+    The output samples are between -1 and +1 (i.e. "-1 <= s <= +1").
+
+    The "duty" parameter of the square generator influences the duty cycle
+    of the signal. Zero means 50%-50%, 0.5 means 75% on, 25% off, -0.8 means
+    10% on, 90% off etc... Of course, the "duty" parameter might also be a
+    vector of size "duration".
+
+  gen_env duration*, xvals, yvals, [base]
+    Generates an interpolated envelope between the points given by xvals and
+    yvals. When base == 1 (the default) then the values will be linearly
+    interpolated, otherwise they follow an exponential curve that is bend
+    inwards (base < 1) or outwards (base > 1).
+
+     # generate a linear envelope with attack in the first 10%
+     gen_env 5000, [0 1 2 9 10], [0 1 0.6 0.6 0];
+
+  gen_adsr duration*, sustain-level, attack-time, decay-time, sustain-time, release-time
+    Simple ADSR envelope generator. The "sustain-level" is the amplitude (0
+    to 1) of the sustain level. The other for parameters give the relative
+    interval times, in any unit you like, only their relative ratios are
+    important. Any of these times might be zero, in which case the
+    corresponding part is omitted from the envelope.
+
+  gen_asymmetric_fm duration*, freq/, phase, [r , [ratio]]
+    "gen_asymmetric_fm" provides a way around the symmetric spectra normally
+    produced by FM. See Palamin and Palamin, "A Method of Generating and
+    Controlling Asymmetrical Spectra" JAES vol 36, no 9, Sept 88, p671-685.
+
+  gen_sum_of_cosines duration*, freq/, phase, ncosines, [fm_mod/]
+    Generates a sum of "n" cosines "(1 + 2(cos(x) + cos(2x) + ... cos(nx)) =
+    sin((n+.5)x) / sin(x/2))". Other arguments are similar to to
+    "gen_oscil".
+
+  gen_sine_summation duration*, freq/, phase, [nsines, [a, [b_ratio, [fm_mod/]]]]
+    "gen_sine_summation" provides a kind of additive synthesis. See
+    J.A.Moorer, "Signal Processing Aspects of Computer Music" and "The
+    Synthesis of Complex Audio Spectra by means of Discrete Summation
+    Formulae" (Stan-M-5). The basic idea is very similar to that used in
+    gen_sum_of_cosines generator.
+
+    The default value for "nsines" is 1 (but zero is a valid value), for "a"
+    is 0.5 and for "b_ratio" is 1.
+
+    (btw, either my formula is broken or the output indeed does not lie
+    between -1 and +1, but rather -5 .. +5).
+
+  gen_from_table duration*, frequency/, table, [phase], [fm_mod/]
+    "gen_from_table" generates a waveform by repeating a waveform given in
+    "table", linearly interpolating between successive points of the
+    "waveform".
+
+  partials2waveshape size*, partials, amplitudes, [phase], [fm_mod/]
+    Take a (perl or pdl) list of (integer) "partials" and a list of
+    "amplitudes" and generate a single wave shape that results by adding
+    these partial sines.
+
+    This could (and should) be used by the "gen_from_table" generator.
+
+  gen_from_partials duration*, frequency/, partials, amplitudes, [phase], [fm_mod/]
+    Take a (perl list or pdl) list of (possibly noninteger) "partials" and a
+    list of "amplitudes" and generate the waveform resulting by summing up
+    all these partial sines.
+
+  filter_one_zero
+      Signature: (in(n); [o] out(n); double a0; double a1)
+
+    apply a one zero filter, y(n) = a0 x(n) + a1 x(n-1)
+
+  filter_one_pole
+      Signature: (in(n); [o] out(n); double a0; double b1)
+
+    apply a one pole filter, y(n) = a0 x(n) - b1 y(n-1)
+
+  filter_two_zero
+      Signature: (in(n); [o] out(n); double a0; double a1; double a2)
+
+    apply a two zero filter, y(n) = a0 x(n) + a1 x(n-1) + a2 x(n-2)
+
+  filter_two_pole
+      Signature: (in(n); [o] out(n); double a0; double b1; double b2)
+
+    apply a two pole filter, y(n) = a0 x(n) - b1 y(n-1) - b2 y(n-2)
+
+  filter_formant
+      Signature: (in(n); [o] out(n); double radius; double frequency; double gain)
+
+    apply a formant filter, y(n) = x(n) - r*x(n-2) +
+    2*r*cos(2*pi*frequency)*y(n-1) - r*r*y(n-2). A good value for "gain" is
+    1.
+
+  filter_ppolar pdl, radius/, frequency/
+    apply a two pole filter (given in polar form). The filter has two poles,
+    one at (radius,frequency), the other at (radius,-frequency). Radius is
+    between 0 and 1 (but less than 1), and frequency is between 0 and 0.5.
+    This is the standard resonator form with poles specified by the polar
+    coordinates of one pole.
+
+  filter_zpolar pdl, radius/, frequency/
+    apply a two zero filter (given in polar form). See "filter_ppolar".
+
+  partials2polynomial partials, [kind]
+    "partials2polynomial" takes a list of harmonic amplitudes and returns a
+    list of Chebychev polynomial coefficients. The argument "kind"
+    determines which kind of Chebychev polynomial we are interested in, 1st
+    kind or 2nd kind. (default is 1).
+
+  ring_modulate in1, in2
+    ring modulates in1 with in2 (this is just a multiply).
+
+  amplitude_modulate am_carrier, in1, in2
+    amplitude modulates am_carrier and in2 with in1 (this calculates in1 *
+    (am_carrier + in2)).
+
+  filter_sir
+      Signature: (x(n); a(an); b(bn); [o]y(n))
+
+    Generic (short delay) impulse response filter. "x" is the input signal
+    (which is supposed to be zero for negative indices). "a" contains the
+    input (x) coefficients (a0, a1, .. an), whereas "b" contains the output
+    (y) coefficients (b0, b1, ... bn), i.e.:
+
+     y(n) = a0 x(n) - b1 y(n-1) + a1 x(n-1) - b2 y(n-2) + a2 x(n-2) - b3 ...
+
+    This can be used to generate fir and iir filters of any length, or even
+    more complicated constructs.
+
+    "b0" (then first element of "b") is being ignored currently AND SHOULD
+    BE SPECIFIED AS ONE FOR FUTURE COMPATIBILITY
+
+  filter_lir
+      Signature: (x(n); int a_x(an); a_y(an); int b_x(bn); b_y(bn); [o]y(n))
+
+    Generic (long delay) impulse response filter. The difference to
+    "filter_sir" is that the filter coefficients need not be consecutive,
+    but instead their indices are given by the "a_x" and "b_x" (integer)
+    vectors, while the corresponding coefficients are in "a_y" and "b_y".
+    (All "a_x" must be >= 0, while all the "b_x" must be >= 1, as you should
+    expect).
+
+    See "filter_sir" for more info.
+
+  filter_fir input, xcoeffs
+    Apply a fir (finite impulse response) filter to "input". This is the
+    same as calling:
+
+     filter_sir input, xcoeffs, pdl()
+
+  filter_iir input, ycoeffs
+    Apply a iir (infinite impulse response) filter to "input". This is just
+    another way of saying:
+
+     filter_sir input, pdl(1), ycoeffs
+
+    That is, the first member of "ycoeffs" is being ignored AND SHOULD BE
+    SPECIFIED AS ONE FOR FUTURE COMPATIBILITY!
+
+  filter_comb input, delay*, scaler
+    Apply a comb filter to the piddle "input". This is implemented using a
+    delay line of length "delay" (which must be 1 or larger and can be
+    non-integer) and a feedback scaler.
+
+     y(n) = x(n-size-1) + scaler * y(n-size)
+
+    cf. "filter_notch" and
+    http://www.harmony-central.com/Effects/Articles/Reverb/comb.html
+
+  filter_notch input, delay*, scaler
+    Apply a comb filter to the piddle "input". This is implemented using a
+    delay line of length "delay" (which must be 1 or larger and can be
+    non-integer) and a feedforward scaler.
+
+     y(n) = x(n-size-1) * scaler + y(n-size)
+
+    As a rule of thumb, the decay time of the feedback part is
+    "7*delay/(1-scaler)" samples, so to get a decay of Dur seconds, "scaler
+    <= 1-7*delay/(Dur*Srate)". The peak gain is "1/(1-(abs scaler))". The
+    peaks (or valleys in notch's case) are evenly spaced at "srate/delay".
+    The height (or depth) thereof is determined by scaler -- the closer to
+    1.0, the more pronounced. See Julius Smith's "An Introduction to Digital
+    Filter Theory" in Strawn "Digital Audio Signal Processing", or Smith's
+    "Music Applications of Digital Waveguides"
+
+  filter_allpass input, delay*, scaler-feedback, scaler-feedforward
+    "filter_allpass" or "moving average comb" is just like "filter_comb" but
+    with an added feedforward term. If "scaler-feedback == 0", we get a
+    moving average comb filter. If both scaler terms == 0, we get a pure
+    delay line.
+
+     y(n) = feedforward*x(n-1) + x(n-size-1) + feedback*y(n-size)
+
+    cf. http://www.harmony-central.com/Effects/Articles/Reverb/allpass.html
+
+  design_remez_fir filter_size, bands(2,b), desired_gain(b), type, [weight(b)]
+    Calculates the optimal (in the Chebyshev/minimax sense) FIR filter
+    impulse response given a set of band edges, the desired reponse on those
+    bands, and the weight given to the error in those bands, using the
+    Parks-McClellan exchange algorithm.
+
+    The first argument sets the filter size: "design_remez_fir" returns as
+    many coefficients as specified by this parameter.
+
+    "bands" is a vector of band edge pairs (start - end), which specify the
+    start and end of the bands in the filter specification. These must be
+    non-overlapping and sorted in increasing order. Only values between 0 (0
+    Hz) and 0.5 (the Nyquist frequency) are allowed.
+
+    "des" specifies the desired gain in these bands.
+
+    "weight" can be used to give each band a different weight. If absent, a
+    vector of ones is used.
+
+    "type" is any of the exported constants "BANDPASS", "DIFFERENTIATOR" or
+    "HILBERT" and can be used to select various design types (use "BANDPASS"
+    until this is documented ;)
+
+  filter_src input, srate, [width], [sr-mod]
+    Generic sampling rate conversion, implemented by convoluting "input"
+    with a sinc function of size "width" (default when unspecified or zero:
+    5).
+
+    "srate" determines the input rate / output rate ratio, i.e. values > 1
+    speed up, values < 1 slow down. Values < 0 are allowed and reverse the
+    signal.
+
+    If "sr_mod" is omitted, the size of the output piddle is calculcated as
+    "length(input)/abs(srate)", e.g. it provides the full stretched or
+    shrinked input signal.
+
+    If "sr_mod" is specified it must be as large as the desired output, i.e.
+    it's size determines the output size. Each value in "sr_mod" is added to
+    "srate" at the given point in "time", so it can be used to "modulate"
+    the sampling rate change.
+
+     # create a sound effect in the style of "Forbidden Planet"
+     $osc = 0.3 * gen_oscil $osc, 30 / $pdl->rate;
+     $output = filter_src($input, 1, 0, $osc);
+
+  filter_contrast_enhance input, enhancement
+    Contrast-enhancement phase-modulates a sound file. It's like audio MSG.
+    The actual algorithm is (applied to the normalised sound)
+    "sin(input*pi/2 + (enhancement*sin(input*2*pi)))". The result is to
+    brighten the sound, helping it cut through a huge mix.
+
+  filter_granulate input, expansion, [option-hash], option => value...
+    "filter_granulate" "granulates" the sound file file. It is the poor
+    man's way to change the speed at which things happen in a recorded sound
+    without changing the pitches. It works by slicing the input file into
+    short pieces, then overlapping these slices to lengthen (or shorten) the
+    result; this process is sometimes known as granular synthesis, and is
+    similar to the "freeze" function. The duration of each slice is "length"
+    -- the longer, the more like reverb the effect. The portion of the
+    length (on a scale from 0 to 1.0) spent on each ramp (up or down) is
+    "ramp". This can control the smoothness of the result of the overlaps.
+    The more-or-less average time between successive segments is "hop". The
+    accuracy at which we handle this hopping is set by the float "jitter" --
+    if "jitter" is very small, you may get an annoying tremolo. The overall
+    amplitude scaler on each segment is "scaler" -- this is used to try to
+    to avoid overflows as we add all these zillions of segments together.
+    "expansion" determines the input hop in relation to the output hop; an
+    expansion-amount of 2.0 should more or less double the length of the
+    original, whereas an expansion-amount of 1.0 should return something
+    close to the original speed.
+
+    The defaults for the arguments/options are:
+
+     expansion      1.0
+     length(*)      0.15
+     scaler         0.6
+     hop(*)         0.05
+     ramp           0.4
+     jitter(*)      0.5
+     maxsize        infinity
+
+    The parameters/options marked with (*) actually depend on the sampling
+    rate, and are always multiplied by the "rate" attribute of the piddle
+    internally. If the piddle lacks that attribute, 44100 is assumed. NOTE:
+    This is different to most other filters, but should be ok since
+    "filter_granulate" only makes sense for audiofiles.
+
+  audiomix pos1, data1, pos2, data2, ...
+    Generate a mix of all given piddles. The resulting piddle will contain
+    the sum of all data-piddles at their respective positions, so some
+    scaling will be necessary before or after the mixing operation (e.g.
+    scale2short).
+
+     # mix the sound gong1 at position 0, the sound bass5 at position 22100
+     # and gong2 at position 44100. The resulting piddle will be large enough
+     # to accomodate all the sounds:
+     $mix = audiomix 0, $gong1, 44100, $gong2, 22100,  $gong2
+
+  filter_center piddle
+    Normalize the piddle so that it is centered around "y = 0" and has
+    maximal amplitude of 1.
+
+  scale2short piddle
+    This method takes a sound in any format (preferably float or double) and
+    scales it to fit into a signed short value, suitable for playback using
+    "playudio" or similar functions.
+
+  gen_fft_window size*, type, [$beta]
+    Creates and returns a specific fft window. The "type" is any of the
+    following. These are (case-insensitive) strings, so you might need to
+    quote them.
+
+     RECTANGULAR    just ones (the identity window)
+     HANNING        0.50 - 0.50 * cos (0 .. 2pi)
+     HAMMING        0.54 - 0.46 * cos (0 .. 2pi)
+     WELCH          1 - (-1 .. 1) ** 2
+     PARZEN         the triangle window
+     BARTLETT       the symmetric triangle window
+     BLACKMAN2      blackman-harris window of order 2
+     BLACKMAN3      blackman-harris window of order 3
+     BLACKMAN4      blackman-harris window of order 4
+     EXPONENTIAL    the exponential window
+     KAISER         the kaiser/bessel window (using the parameter C<beta>)
+     CAUCHY         the cauchy window (using the parameter <beta>)
+     POISSON        the poisson window (exponential using parameter C<beta>)
+     RIEMANN        the riemann window (sinc)
+     GAUSSIAN       the gaussian window of order C<beta>)
+     TUKEY          the tukey window (C<beta> specifies how much of the window
+                    consists of ones).
+     COSCOS         the cosine-squared window (a partition of unity)
+     SINC           same as RIEMANN
+     HANN           same as HANNING (his name was Hann, not Hanning)
+
+     LIST           this "type" is special in that it returns a list of all types
+
+  cplx(2,n) = rfft real(n)
+    Do a (complex fft) of "real" (extended to complex so that the imaginary
+    part is zero), and return the complex fft result. This function tries to
+    use PDL::FFTW (which is faster for large vectors) when available, and
+    falls back to PDL::FFT, which is likely to return different phase signs
+    (due to different kernel functions), so beware! In fact, since "rfft"
+    has to shuffle the data when using PDL::FFT, the fallback is always
+    slower.
+
+    When using PDL::FFTW, a wisdom file ~/.pdl_wisdom is used and updated,
+    if possible.
+
+  real(n) = irfft cplx(2,n)
+    The inverse transformation (see "rfft"). "irfft rfft $pdl == $pdl"
+    always holds.
+
+  spectrum data, [norm], [window], [beta]
+    Returns the spectrum of a given pdl. If "norm" is absent (or "undef"),
+    it returns the magnitude of the fft of "data". When "norm" == 1 (or "eq
+    'NORM'", case-insensitive), it returns the magnitude, normalized to be
+    between zero and one. If "norm" == 0 (or "eq 'dB'", case-insensitive),
+    then it returns the magnitude in dB.
+
+    "data" is multiplied with "window" (if not "undef") before calculating
+    the fft, and usually contains a window created with "gen_fft_window"
+    (using "beta"). If "window" is a string, it is handed over to
+    "gen_fft_window" (together with the beta parameter) to create a window
+    of suitable size.
+
+    This function could be slightly faster.
+
+  concat pdl, pdl...
+    This is not really an audio-related function. It simply takes all
+    piddles and concats them into a larger one. At the moment it only
+    supports single-dimensional piddles and is implemented quite slowly
+    using perl and data-copying, but that might change...
+
+  filter_convolve
+      Signature: (input(n); kernel(m); int fftsize(); [o]output(n))
+
+    info not available
+
+  rshift
+      Signature: (x(n); int shift(); c(); [oca]y(n))
+
+    Shift vector elements without wrap and fill the free space with a
+    constant. Flows data back & forth, for values that overlap.
+
+    Positive values shift right, negative values shift left.
+
+  polynomial
+      Signature: (coeffs(n); x(m); [o]out(m))
+
+    evaluate the polynomial with coefficients "coeffs" at the position(s)
+    "x". "coeffs[0]" is the constant term.
+
+  linear_interpolate
+      Signature: (x(); fx(n); fy(n); [o]y())
+
+    Look up the ordinate "x" in the function given by "fx" and "fy" and
+    return a linearly interpolated value (somewhat optimized for many
+    lookups).
+
+    "fx" specifies the ordinates (x-coordinates) of the function and most be
+    sorted in increasing order. "fy" are the y-coordinates of the function
+    in these points.
+
+  bessi0
+      Signature: (a(); [o]b())
+
+    calculate the (approximate) modified bessel function of the first kind
+
+  fast_sin
+      Signature: (r(n); [o]s(n))
+
+    fast sine function (inaccurate table lookup with ~12 bits precision)
+
+AUTHOR
+    Marc Lehmann <schmorp@schmorp.de>. The ideas were mostly taken from
+    common lisp music (CLM), by Bill Schottstaedt "bil@ccrma.stanford.edu".
+    I also borrowed many explanations (and references) from the clm docs and
+    some code from clm.c. Highly inspiring!
+
+SEE ALSO
+    perl(1), PDL.
 

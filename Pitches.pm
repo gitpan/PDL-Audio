@@ -28,7 +28,7 @@ C<interleaved "f" and "s", e.g. as4>, C<bf3>, C<fs6>.
 
 =head1 AUTHOR
 
-Marc Lehmann <pcg@goof.com>
+Marc Lehmann <schmorp@schmorp.de>
 
 =head1 SEE ALSO
 

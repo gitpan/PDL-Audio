@@ -2,6 +2,10 @@ Revision history for Perl extension PDL::Audio
 
 TODO: read_sound returns undef? how to return ints from pp_def subs?
 
+1.011 Thu Mar  3 18:00:52 CET 2005
+	- change of contact address.
+        - improved README.
+
 1.01  Tue Dec 28 21:50:20 CET 2004
 	- compile sndlib with -fPIC or equivalent.
         - fixed some typoes, and many minor bugs

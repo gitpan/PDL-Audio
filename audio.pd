@@ -1,4 +1,4 @@
-$VERSION = '1.01';
+$VERSION = '1.011';
 
 pp_setversion $VERSION;
 pp_beginwrap (); # force error with older PPs
@@ -1891,7 +1891,7 @@ pp_addpm {At => Bot}, <<'EOD';
 
 =head1 AUTHOR
 
-Marc Lehmann <pcg@goof.com>. The ideas were mostly taken from common
+Marc Lehmann <schmorp@schmorp.de>. The ideas were mostly taken from common
 lisp music (CLM), by Bill Schottstaedt C<bil@ccrma.stanford.edu>. I also
 borrowed many explanations (and references) from the clm docs and some
 code from clm.c. Highly inspiring!
