@@ -1,0 +1,5 @@
+Ok, PDL::Audio is beta, but the reason why it breaks is that it requires
+not only the current cvs version of PDL, but also a special branch in it
+(it might even go away in the future, to be integrated into PDL).  I just
+uploaded it to make it _possible_ to use it for the interested people.
+

@@ -9,3 +9,8 @@ all filter designs(!)
 locsig / dlocsig
 csound!
 kaiser-spectrum beta values negative => stopband in decibel(?)
+
+PDL::Complex + typecasts & overloading
+
+   >  > - pp_addxs adds functions to the _PDL_ package, not at all to my own
+

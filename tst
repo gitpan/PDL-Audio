@@ -1,25 +1,25 @@
 #!/usr/bin/perl
 
-use blib;
+#use blib;
 use PDL;
 use PDL::Audio;
 #use PDL::Graphics::PGPLOT;
 use PDL::Audio::Pitches;
 use PDL::Dbg;
+use PDL::Complex;
 
 $|=1;
-
    
 *_dur2time = *PDL::Audio::_dur2time;
 sub HZ (){ 22050 };
 
 sub freqz {
-   my ($a, $w) = @_;
+   my ($a, $b, $w) = @_;
    $w = 512 unless defined $w;
    $w = zeroes($w)->xlinvals(0,M_PI*($w-1)/$w) unless ref $w;
-   $w = cat(cos $w, sin $w)->xchg(0,1);
+   $w = exp i * r2C $w;
    
-   $a->Cpolynomial($w);
+   Cabs(Cdiv($a->rCpolynomial($w),$b->rCpolynomial($w)));
 }
 
 sub play {
@@ -35,8 +35,7 @@ print describe_audio($pdl), "\n";
 $pdl = $pdl->float->filter_src($pdl->rate / HZ);
 $pdl = $pdl->filter_center;
 
-my @stdenv = (pdl(0,1,2,15,16), pdl(0,1,0.9,0.7,0));
-
+my @stdenv = (pdl(0,0.1,0.2,0.9,1), pdl(0,1,0.6,0.6,0));
 $env = gen_env $pdl, @stdenv;
 
 sub tst($$) {
@@ -140,7 +139,7 @@ tst 'waveshaping', sub {
    play $pdl * gen_env $pdl, @stdenv;
 };
 
-tst simple_generators, sub {
+0&&tst simple_generators, sub {
    print " 1/f noise"; play $env * gen_rand_1f $pdl;
    print " 900 hz sine"; play $env * gen_oscil $pdl, 900/HZ;
    print " 900 hz triangle"; play $env * gen_triangle $pdl, 900/HZ;
@@ -164,31 +163,82 @@ tst 'spectrum', sub {
    exit;
 } if 0;
 
-sub concat {
-   my $len = sum pdl map $_->getdim(0), @_;
-   my $r = zeroes $len;
-   my $o = 0;
-   for (@_) {
-      my $e = $o + $_->getdim(0) - 1;
-      (my $t = $r->slice("$o:$e")) .= $_;
-      $o = $e + 1;
-   }
-   $r;
-}
-
 tst 'karplus', sub {
-   my $pdl = concat gen_rand(0.04*HZ, 1), zeroes(5.0*HZ);
-   #$pdl = $pdl->filter_ppolar(0.97, 440/HZ);
-      $pdl->filter_two_pole(1, -2*$radius*cos($freq*M_2PI), $radius**2);
+   my $pdl = concat gen_rand(0.4*HZ, 1), zeroes(5.0*HZ);
 
-   my $radius = 0.05185;
+   my $dur = 2*HZ;
    my $freq = 440/HZ;
-   $pdl = $pdl->filter_lir(pdl(0), pdl(1),
-                           pdl(int(1/$freq), int(1/$freq)), pdl(0.6, 0.399));
+   my $damping = -0.5/HZ;
+
+   $freq *= M_2PI;
+
+   my $e = exp $damping;
+   my $c1 = 2 * $e * cos $freq;
+   my $c2 = $e * $e;
+   my $tm = atan2 ($freq, $damping) / $freq;
+   my $scale = sqrt ($damping*$damping + $freq*$freq) * exp (-$damping*$tm) * HZ / 750000;
+   print "$scale, $c1, $c2\n";
+   $pdl = $pdl->filter_lir(pdl(1), pdl($scale),
+                           pdl(1, 2, int(1/$freq+6)), pdl(-$c1, $c2, -$scale*0.1));
    line $pdl;
    play $pdl * gen_env $pdl, @stdenv;
-   exit;
 
+} if 0;
+
+tst 'karplus2', sub {
+   my $pdl = concat gen_rand(1.*HZ, 1), zeroes(5.0*HZ);
+
+   my $dur = 2*HZ;
+   my $freq = 440/HZ;
+   my $freq2 = 88/HZ;
+   my $reson = 0.05;
+
+   $pdl = $pdl->filter_lir(
+                           pdl(1, 2, 1,2),
+                           pdl(-$reson*$reson, 2*$reson*cos(M_2PI*$freq),
+                               -$reson*$reson, 2*$reson*cos(M_2PI*$freq2)),
+                           pdl(int(1/$freq),int(1/$freq2)), pdl(0.49, 0.499));
+   line $pdl;
+   play $pdl; # * gen_env $pdl, @stdenv;
+} if 0;
+
+tst 'vibro', sub {
+   my $pdl;
+   $pdl = gen_oscil 2*HZ, 40/HZ;
+   #$pdl = gen_oscil 2*HZ, 40/HZ, 0, $pdl->xlinvals(0,80/HZ);
+   #$pdl = $pdl->filter_zpolar(0.9, 80/HZ);
+   #line $pdl->slice("0:30000");
+   $pdl = pdl(1,1)->partials2polynomial(1)->polynomial($pdl);
+   line $pdl;
+   play $pdl;
+   exit;
+} if 0;
+
+tst chorus, sub {
+   play $pdl;
+   my $lfo = $osc = 0.02 * gen_rand $pdl, 30/HZ;
+   my $dly = $pdl->filter_src(1, undef,  $lfo);
+   play $dly->rshift(0.030*HZ) + $pdl;
+};
+
+tst phazor, sub {
+   play $pdl;
+   print "rfft...";
+   my $fft = rfft($pdl)->Cr2p;
+   my $im = im $fft; $im .= $im->rshift(-10000);
+   print "irfft...";
+   my $fft = irfft($fft->Cp2r);
+   play $fft;
+} if 0;
+
+tst strong, sub {
+   # as done originally by Alex Strong
+   my $pdl = zeroes HZ*5;
+   my $freq = int (HZ/220);
+   my $x = $pdl->slice("0:".($freq-1)); $x .= gen_rand $x, 1;
+
+   $pdl = $pdl->filter_lir(pdl(0),pdl(1),pdl($freq,$freq+1),pdl(0.5,0.5));
+   play $pdl;
 };
 
 #print "original version..."; play $pdl; print "\n";

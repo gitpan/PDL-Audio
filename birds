@@ -4,6 +4,8 @@ use PDL;
 use PDL::Audio;
 use PDL::Graphics::PGPLOT;
 
+#sub line {}
+
 $|=1;
 
 $birds = do 'bird-def.pl';

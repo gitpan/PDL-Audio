@@ -1,14 +1,22 @@
 Revision history for Perl extension PDL::Audio
 
+1.0   Mon Jul 12 15:28:17 CEST 2004
+	- fixed _writesound (I never needed that).
+        - slightly improved filter_center.
+
+0.05  Mon May 15 05:56:54 CEST 2000
+	- removed PDL::Complex (it's now part of PDL)
+        - updated to use the new PDL::PP.
+
 0.04  Tue Dec 28 16:29:47 CET 1999
         - many more filters (fft, src, granulate, convolve), many more
-        bugfixes, working accessors...
+          bugfixes, working accessors...
         - remez fir filter design
         - cut down on object size using GenericTypes. Hooo is it large!
 
 0.03  (private release)
         - implemented many generators and filters, inspired by common lisp
-        music.
+          music.
 
 0.02  Tue Dec 21 15:07:56 CET 1999
 	- added irix audio support and some more by Christian Soeller.

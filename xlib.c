@@ -1,14 +1,4 @@
-/* this is an icluded .c file, _not_ a header file */
-/* likewise, xaudio.c is an included xs file, _not_ a c file */
-/* but well, so's life! */
-
 #include "xlib.h"
-
-void
-mus_barfer (int err_type, char *err_msg)
-{
-  barf ("%s [MUSERR]", err_msg);
-}
 
 /*
  * the following functions were originally taken from sox-12.16/libst.c

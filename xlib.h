@@ -14,8 +14,6 @@
 # define M_2PI	(2. * M_PI)
 #endif
 
-void mus_barfer (int err_type, char *err_msg);
-
 unsigned char st_linear_to_ulaw(int sample);
 int st_ulaw_to_linear(unsigned char ulawbyte);
 unsigned char st_linear_to_Alaw(int sample);
