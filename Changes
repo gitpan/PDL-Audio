@@ -2,6 +2,11 @@ Revision history for Perl extension PDL::Audio
 
 TODO: read_sound returns undef? how to return ints from pp_def subs?
 
+1.1   Tue Nov  8 19:48:00 CET 2005
+	- fix raudio/waudio/describe_audio to use the same logical
+          layout for samples and to work correctly for stereo audio
+          (reported by Bob MacCallum).
+
 1.011 Thu Mar  3 18:00:52 CET 2005
 	- change of contact address.
         - improved README.

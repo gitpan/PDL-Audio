@@ -1,4 +1,4 @@
-$VERSION = '1.011';
+$VERSION = '1.1';
 
 pp_setversion $VERSION;
 pp_beginwrap (); # force error with older PPs
@@ -277,23 +277,27 @@ Whereas a freshly loaded soundfile might yield:
 
 sub describe_audio($) {
    my $pdl = shift;
-   my ($samples, $channels) = $pdl->dims;
+   my ($channels, $samples) = $pdl->dims;
    my $chan = $channels  < 2 ? "mono" :
               $channels == 2 ? "stereo" :
               $channels == 4 ? "quad channel" :
-                               "$channel channel";
+                               "$channels channel";
    my $desc = "$chan sound with $samples samples";
    $desc .= sprintf ", original name \"%s\"", $pdl->path if $pdl->path;
    $desc .= sprintf ", type %d (%s)", $pdl->filetype, sound_type_name($pdl->filetype) if $pdl->filetype;
    $desc .= sprintf ", rate %d/s (duration %.2fs)", $pdl->rate, $samples/$pdl->rate if $pdl->rate;
    $desc .= sprintf ", format %d (%s)", $pdl->format, sound_format_name($pdl->format) if $pdl->format;
-   $desc;
+   $desc
 }
 
 =head2 raudio path, [option-hash], option => value, ...
 
-Reads audio data into the piddle. Options can be anything, most useful values are
-C<filetype>, C<rate>, C<channels> and C<format>.
+Reads audio data into the piddle. Options can be anything, most useful
+values are C<filetype>, C<rate>, C<channels> and C<format>. The returned
+piddle is represents "time" in the outer dimension, and samples in the
+inner (i.e. scalars for mono files, 2-vectors for stereo files):
+   
+ [ [left0, right0], [left1, right1], [left2, right2], ...]
 
  # read any file
  $pdl = raudio "file.wav";
@@ -302,12 +306,14 @@ C<filetype>, C<rate>, C<channels> and C<format>.
 
 =head2 waudio pdl, [option-hash], option => value, ...
 
-Writes a pdl as a file. The path is taken from the header (or the options), e.g.:
+Writes a pdl as a file. See L<raudio> for options and format. The path and
+other metadata is taken from the header, whcih cna be overwritten using
+options, e.g.:
 
  # write a file, using the header of another piddle
- $pdl->waudio($orig_file->gethdr);
- # write pdl as au file, take rate from the header
- $pdl->waudio(path => "piddle.au", filetype => FILE_AU, format => FORMAT_16_LINEAR;
+ $pdl->waudio ($orig_file->gethdr);
+ # write pdl as .au file, take rate from the header
+ $pdl->waudio (path => "piddle.au", filetype => FILE_AU, format => FORMAT_16_LINEAR;
 
 =cut
 
@@ -340,15 +346,15 @@ sub raudio {
    $pdl = $pdl->clump(2) if $channels == 1;
    $pdl->sever;
    $pdl->sethdr(\%hdr);
-   $pdl;
+   $pdl
 }
 
 sub _audio_make_plain {
    my $pdl = shift;
    if ($pdl->getndims == 1) {
-      ($pdl, 1, $pdl->getdim(0));
+      ($pdl, 1, $pdl->getdim(0))
    } else {
-      ($pdl->xchg(0,1)->clump(-1), ($pdl->dims)[1,0]);
+      ($pdl->xchg(0,1)->clump(-1), $pdl->dims)
    }
 }
 
@@ -363,11 +369,14 @@ sub waudio {
 
    ($pdl, $channels, $frames) = _audio_make_plain $pdl->convert(long);
 
+   1 <= $channels && $channels <= 2
+      or croak "can only write mono or stereo (one or two channel) files, not $channels channel files";
+
    my $fd = open_sound_output $hdr{path}, $hdr{rate}, $channels, $hdr{format}, $hdr{filetype}, $hdr{comment};
    $fd >= 0 or barf "$hdr{$path}: ".audio_error_name audio_error;
    $pdl->clump(-1)->write_sound($fd, $channels, $frames)
        >= 0 or barf "$path: ".audio_error_name audio_error;
-   (close_sound_output $fd, mus_samples2bytes $hdr{format}, $frames)
+   (close_sound_output $fd, mus_samples2bytes $hdr{format}, $frames * $channels)
        >= 0 or barf "$hdr{$path}: ".audio_error_name audio_error;
 }
 
@@ -392,7 +401,7 @@ sub cut_leading_silence {
    my $level = 1*shift;
    my $skip = which (abs($pdl) > $level);
    $skip = $skip->nelem ? $skip->at(0) : 0;
-   $pdl->slice("$skip:-1");
+   $pdl->slice("$skip:-1")
 }
 
 sub cut_trailing_silence {
@@ -402,12 +411,12 @@ sub cut_trailing_silence {
    my $skip = which (abs($pdl) > $level);
    $skip = $skip->nelem ? $skip->at(-1) : -1;
    $skip-- if $skip > 0;
-   $pdl->slice("0:$skip");
+   $pdl->slice("0:$skip")
 }
 
 sub cut_silence {
    $_[0]->cut_leading_silence($_[1])
-        ->cut_trailing_silence($_[1]);
+        ->cut_trailing_silence($_[1])
 }
 
 # have we been a bad boy?
