@@ -25,17 +25,16 @@ $hash{PM}{'Pitches.pm'} = '$(INST_LIBDIR)/Audio/Pitches.pm';
 push @{$hash{DIR}}, "sndlib";
 
 WriteMakefile(%hash,
-    'dist'	=> {
-	            PREOP	=> 'pod2text Audio.pm | tee README >$(DISTVNAME)/README; chmod -R u=rwX,go=rX . ;',
-	            COMPRESS	=> 'gzip -9v',
-	            SUFFIX	=> '.gz',
-	           },
-      MYEXTLIB	=> "sndlib/sndlib.a",
-      VERSION_FROM => 'audio.pd',
-      DIR	=> [],
-      XS	=> {
-                     "Audio.xs" => "Audio.c",
-                   },
+   'dist'	=> {
+                   PREOP	=> 'pod2text Audio.pm | tee README >$(DISTVNAME)/README; chmod -R u=rwX,go=rX . ;',
+                   COMPRESS	=> 'gzip -9v',
+                   SUFFIX	=> '.gz',
+                  },
+   MYEXTLIB	=> "sndlib/sndlib.a",
+   VERSION_FROM => 'audio.pd',
+   DIR	=> [],
+   EXE_FILES => ["bin/pdlaudio-demo", "bin/pdlaudio-birds"],
+   XS	=> { "Audio.xs" => "Audio.c" },
 );
 
 sub MY::postamble {
@@ -48,6 +47,9 @@ force:
 
 \$(MYEXTLIB): force
 	cd sndlib && \$(MAKE)
+
+clean::
+	cd sndlib && \$(MAKE) clean
 
 ";
 }

@@ -4,6 +4,8 @@ MANIFEST
 Makefile.PL
 README
 TODO
+bin/pdlaudio-demo
+bin/pdlaudio-birds
 audio.pd
 config.pl.in
 sndlib/COPYING
@@ -31,7 +33,5 @@ remez.h
 remez.c
 Scales.pm
 Pitches.pm
-bird-def.pl
-birds
-tst
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml                                 Module YAML meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)

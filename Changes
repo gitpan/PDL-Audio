@@ -2,6 +2,14 @@ Revision history for Perl extension PDL::Audio
 
 TODO: read_sound returns undef? how to return ints from pp_def subs?
 
+1.2   Wed Apr 18 10:24:11 CEST 2012
+	- update sndlib/config.guess and config.sub, recreated configure.
+        - birds now uses PGPLOT only when USE_PGPLOT=1 is set in the
+          environment.
+        - created and installed bin/pdlaudio-demo and pdlaudio-birds.
+        - make clean makes clean in sndlib as well.
+        - embellished the intiial gen_oscill example a bit.
+
 1.1   Tue Nov  8 19:48:00 CET 2005
 	- fix raudio/waudio/describe_audio to use the same logical
           layout for samples and to work correctly for stereo audio

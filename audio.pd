@@ -1,4 +1,4 @@
-$VERSION = '1.1';
+$VERSION = '1.2';
 
 pp_setversion $VERSION;
 pp_beginwrap (); # force error with older PPs
@@ -17,6 +17,10 @@ PDL::Audio - Some PDL functions intended for audio processing.
 
 Oh well ;) Not much "introductory documentation" has been written yet :(
 
+Installing this distribution also installs F<pdlaudio-demo>, which
+showcases some of the oeprators, and C<pdlaudio-birds>, which imites some
+bird calls with PDL::Audio. You should study them to get the hang of it.
+
 =head2 NOTATION
 
 Brackets around parameters indicate that the respective parameter is
@@ -34,6 +38,9 @@ frequency:
  $signal = gen_oscil 2*HZ, 440/HZ;
  # with a sampling frequency of 44100 Hertz:
  $signal = gen_oscil 2*44100, 440/44100;
+
+ print describe_audio $signal, "\n";
+ playaudio $signal->scale2short;
 
 To help you, the required unit is given as a type suffix in the parameter
 name. A "/" means that you have to divide by the sampling frequency (to
@@ -278,6 +285,7 @@ Whereas a freshly loaded soundfile might yield:
 sub describe_audio($) {
    my $pdl = shift;
    my ($channels, $samples) = $pdl->dims;
+   ($channels, $samples) = (1, $channels) unless defined $samples;
    my $chan = $channels  < 2 ? "mono" :
               $channels == 2 ? "stereo" :
               $channels == 4 ? "quad channel" :
